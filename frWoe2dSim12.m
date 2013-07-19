@@ -18,6 +18,8 @@ switch id
         all_epoch_pos_gain = 13.7;
         all_epoch_neg_gain = 2.3;
         
+        % add changes
+        
         all_gain = 3.1 + 1.4*(1:num_step);
         relative_gain = all_gain/all_epoch_gain;
         
