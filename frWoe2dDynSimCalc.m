@@ -148,9 +148,20 @@ cum_woe_error = nan(num_trial,1);
 cum_woe_end = nan(num_trial,1);
 
 %%
+urgency = cumsum([0,mean_epoch_dfr_v]);
+urgency_dt = [];
+for i = 1:10
+    temp = linspace(urgency(i),urgency(i+1),26);
+    urgency_dt = [urgency_dt,temp(1:25)];
+end
+
+shift_num = tnd_pre/10;
+urgency_dt = circshift([urgency_dt,zeros(1,100)],[0,shift_num]);
+urgency_dt = urgency_dt(1:250);
+
 for k = 1:num_trial
     
-    urgency = mean_epoch_dfr_v;
+    
     
     if mod(k,1e3)==0
         printf('%d\n',k)
@@ -159,12 +170,19 @@ for k = 1:num_trial
     x1_fr(k,1) = fr_offset + init_dfr_sd*randn(1);
     x2_fr(k,1) = fr_offset + init_dfr_sd*randn(1);
     
+    plot_flag = 1;
+    
+    % hidden rate
+    
+    hr1 = nan(1,length(t));
+    hr2 = nan(1,length(t));
+    hr1(1) = x1_fr(k,1);
+    hr2(1) = x2_fr(k,1);
+    
+    % observable rate (urgency added)
+
     r1 = nan(1,length(t));
     r2 = nan(1,length(t));
-
-    plot_flag = 1;
-    r1(1) = x1_fr(k,1);
-    r2(1) = x2_fr(k,1);
 
     cum_woe(k,1) = 0;
     N = 0;
@@ -210,8 +228,8 @@ for k = 1:num_trial
                 sig2 = -dfr_v(shape_ind) + noise2;
             end
 
-            x1_fr(k,ei+1) = x1_fr(k,ei) + sig1 + urgency(ei);
-            x2_fr(k,ei+1) = x2_fr(k,ei) + sig2 + urgency(ei);
+            x1_fr(k,ei+1) = x1_fr(k,ei) + sig1;
+            x2_fr(k,ei+1) = x2_fr(k,ei) + sig2;
 
             % Assuming the pupulation FR cannot go below min_fr
             if 1
@@ -224,8 +242,14 @@ for k = 1:num_trial
             end
         end
         
-        r1(ti+1) = r1(ti) + dt/tau_r*(x1_fr(k,ei+1) - r1(ti));
-        r2(ti+1) = r2(ti) + dt/tau_r*(x2_fr(k,ei+1) - r2(ti));
+        hr1(ti+1) = hr1(ti) + dt/tau_r*(x1_fr(k,ei+1) - hr1(ti));
+        hr2(ti+1) = hr2(ti) + dt/tau_r*(x2_fr(k,ei+1) - hr2(ti));
+        
+        if ei>0
+           r1(ti+1) = hr1(ti+1) + urgency_dt(ti);
+           r2(ti+1) = hr2(ti+1) + urgency_dt(ti);
+        end
+        
         
         % if FR of either neuron reaches the bound...
         if (r1(ti+1)>B) || (r2(ti+1)>B)
@@ -461,10 +485,7 @@ out.betaFit = betaFit;
     % set(h,'EdgeColor','r')
     
     figure(fig+11);clf;hold on;
-    % plot(0:3000,cumsum(p_rt_obs_hist),'k-')
-    plot(t,p_rt_obs_hist_10ms','k-')
+    plot(0:3000,cumsum(p_rt_obs_hist),'k-')
     plot(0:3000,cumsum(p_rt_pred_hist),'r-')
     
 end
-
-
